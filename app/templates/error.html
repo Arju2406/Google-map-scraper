@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - Google Maps Scraper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="error-content">
+            <h1>Oops! Something went wrong</h1>
+            <p class="error-message">{{ error }}</p>
+            <a href="{{ url_for('index') }}" class="primary-button">Return to Home</a>
+        </div>
+    </div>
+</body>
+</html>

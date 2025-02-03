@@ -1,0 +1,92 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps Scraper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="main-container">
+        <div class="content-wrapper">
+            <div class="brand-header">
+                <h1>Google Maps Scraper</h1>
+                <p class="subtitle">Efficient Data Extraction Tool</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <ul id="flash-messages">
+                        {% for category, message in messages %}
+                            <li class="{{ category }}">
+                                <span class="message-icon">{% if category == 'success' %}✓{% else %}!{% endif %}</span>
+                                {{ message }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endwith %}
+
+            <div class="form-card">
+                <form method="post" action="{{ url_for('scrape') }}" id="scrape-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="keyword">Search Keyword</label>
+                            <input type="text" id="keyword" name="keyword" placeholder="e.g., Restaurants, Hotels" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="location">Location</label>
+                            <input type="text" id="location" name="location" placeholder="e.g., New York, NY" required>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="headless" name="headless" value="1">
+                            <label for="headless">Headless Mode</label>
+                            <span class="tooltip">❔
+                                <span class="tooltiptext">Run in background mode</span>
+                            </span>
+                        </div>
+
+                        <div class="buttons-wrapper">
+                            <button type="submit" class="primary-button">
+                                <span class="button-content">
+                                    <span class="icon">🔍</span>
+                                    <span class="text">Start Scraping</span>
+                                </span>
+                            </button>
+
+                            {% if show_view_data_button %}
+                            <a href="{{ url_for('view_data') }}" class="view-data-button">
+                                <span class="button-content">
+                                    <span class="icon">📊</span>
+                                    <span class="text">View Data</span>
+                                </span>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('scrape-form').addEventListener('submit', function() {
+            const flashMessages = document.getElementById('flash-messages');
+            if (flashMessages) {
+                flashMessages.style.display = 'none';
+            }
+
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            const buttonContent = submitButton.querySelector('.button-content');
+            buttonContent.innerHTML = '<span class="loading-spinner"></span><span class="text">Processing...</span>';
+        });
+    </script>
+</body>
+</html>
