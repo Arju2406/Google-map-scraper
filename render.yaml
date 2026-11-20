@@ -1,0 +1,15 @@
+databases: []
+services:
+  - type: web
+    name: google-map-scraper
+    runtime: python
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: "./render-build.sh"
+    startCommand: "gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 300 app:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.6
+      - key: PIP_DISABLE_PIP_VERSION_CHECK
+        value: 1

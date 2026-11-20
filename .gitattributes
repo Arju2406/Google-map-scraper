@@ -1,0 +1,2 @@
+render-build.sh text eol=lf
+*.py text eol=lf

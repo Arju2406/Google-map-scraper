@@ -1,0 +1,106 @@
+<!-- view_data.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scraped Data - Google Maps Scraper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="data-view-body">
+    <div class="data-view-container">
+        <div class="data-header">
+            <div class="header-content">
+                <h1>Scraped Data</h1>
+                <a href="{{ url_for('index') }}" class="back-button">← Back to Scraper</a>
+            </div>
+        </div>
+
+        {% if data %}
+            <div class="table-outer-container">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="col-category">Category</th>
+                                <th class="col-name">Name</th>
+                                <th class="col-phone">Phone</th>
+                                <th class="col-url">Google Maps</th>
+                                <th class="col-url">Website</th>
+                                <th class="col-status">Status</th>
+                                <th class="col-address">Address</th>
+                                <th class="col-reviews">Reviews</th>
+                                <th class="col-url">Booking</th>
+                                <th class="col-rating">Rating</th>
+                                <th class="col-hours">Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in data %}
+                                <tr>
+                                    <td class="col-category">{{ row['Category'] }}</td>
+                                    <td class="col-name">{{ row['Name'] }}</td>
+                                    <td class="col-phone">{{ row['Phone'] }}</td>
+                                    <td class="col-url">
+                                        {% if row['Google Maps URL'] %}
+                                            <a href="{{ row['Google Maps URL'] }}" target="_blank" class="table-link">View</a>
+                                        {% endif %}
+                                    </td>
+                                    <td class="col-url">
+                                        {% if row['Website'] %}
+                                            <a href="{{ row['Website'] }}" target="_blank" class="table-link">Visit</a>
+                                        {% endif %}
+                                    </td>
+                                    <td class="col-status">{{ row['Business Status'] }}</td>
+                                    <td class="col-address">{{ row['Address'] }}</td>
+                                    <td class="col-reviews">{{ row['Total Reviews'] }}</td>
+                                    <td class="col-url">
+                                        {% if row['Booking Links'] %}
+                                            <a href="{{ row['Booking Links'] }}" target="_blank" class="table-link">Book</a>
+                                        {% endif %}
+                                    </td>
+                                    <td class="col-rating">{{ row['Rating'] }}</td>
+                                    <td class="col-hours">{{ row['Hours'] }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="pagination-container">
+                {% if prev_url %}
+                    <a href="{{ prev_url }}" class="pagination-button">← Previous</a>
+                {% endif %}
+                {% if next_url %}
+                    <a href="{{ next_url }}" class="pagination-button">Next →</a>
+                {% endif %}
+            </div>
+
+            <div class="download-section">
+                <h2>Download Options</h2>
+                <div class="download-options">
+                    <a href="{{ url_for('download_data', format='excel') }}" class="download-button">
+                        <span class="icon">📊</span>
+                        <span class="text">Excel</span>
+                    </a>
+                    <a href="{{ url_for('download_data', format='csv') }}" class="download-button">
+                        <span class="icon">📄</span>
+                        <span class="text">CSV</span>
+                    </a>
+                    <a href="{{ url_for('download_data', format='json') }}" class="download-button">
+                        <span class="icon">{ }</span>
+                        <span class="text">JSON</span>
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No data available. Please scrape some data first.</p>
+                <a href="{{ url_for('index') }}" class="primary-button">Start Scraping</a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
