@@ -12,7 +12,7 @@ class Scroller:
         self.driver = driver
         # Cap the number of locations parsed on cloud hosts. Each location
         # requires a separate page load, which is slow and often blocked.
-        self.max_results = 15 if os.environ.get("RENDER") else 10_000
+        self.max_results = 3 if os.environ.get("RENDER") else 10_000
 
     def __init_parser(self):
         # Import Parser here to avoid circular import
