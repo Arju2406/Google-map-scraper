@@ -23,33 +23,42 @@ class Backend(Base):
     def init_driver(self):
         options = webdriver.ChromeOptions()
 
-        if self.headlessMode:
-            options.add_argument('--headless=new')
-
-        # Chromium binary downloaded at build time on Render (if present).
-        if CHROME_BINARY_PATH:
+        # Use the dedicated headless shell on Render when available; it is much
+        # more stable and lighter than full Chrome in a constrained container.
+        on_render = bool(os.environ.get("RENDER"))
+        if on_render and CHROME_BINARY_PATH:
             options.binary_location = CHROME_BINARY_PATH
+            options.add_argument("--headless")
+        elif self.headlessMode:
+            options.add_argument("--headless=new")
 
         prefs = {"profile.managed_default_content_settings.images": 2}
         options.add_experimental_option("prefs", prefs)
 
-        # Flags required for running Chrome inside containers / as non-root.
+        # Container / non-root stability flags. These prevent the common
+        # "DevToolsActivePort file doesn't exist" and "chrome not reachable"
+        # crashes on low-memory hosts like Render's free plan.
         for flag in (
             "--no-sandbox",
+            "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
             "--disable-gpu",
-            "--disable-setuid-sandbox",
+            "--no-zygote",
+            "--single-process",
             "--window-size=1920,1080",
             "--disable-blink-features=AutomationControlled",
+            "--disable-features=IsolateOrigins,site-per-process",
+            "--hide-scrollbars",
+            "--mute-audio",
         ):
             options.add_argument(flag)
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
 
         Communicator.show_message("Wait checking for driver...")
 
-        if os.environ.get("RENDER") and CHROME_BINARY_PATH:
-            # Selenium Manager resolves the correct driver for the bundled
-            # Chromium without needing a separate webdriver-manager download.
+        if on_render and CHROME_BINARY_PATH:
+            # Selenium Manager resolves a matching driver for the bundled
+            # Chromium without a separate webdriver-manager download.
             self.driver = webdriver.Chrome(options=options)
         else:
             service = Service(ChromeDriverManager().install())
@@ -59,6 +68,12 @@ class Backend(Base):
         if not self.headlessMode:
             self.driver.maximize_window()
         self.driver.implicitly_wait(self.timeout)
+        # Give slow pages / cloud connections more time to load and run scripts.
+        self.driver.set_page_load_timeout(120)
+        try:
+            self.driver.command_executor.set_timeout(120)
+        except Exception:
+            pass
 
     def mainscraping(self):
         try:
