@@ -24,6 +24,10 @@ def scrape():
 
     search_combined = f"{search_query} {location_query}"
 
+    # A new scrape invalidates results from the previous one: clear them so
+    # the "View Data" button does not point to stale data while this runs.
+    Communicator.clear_scraped_data()
+
     try:
         backend = Backend(
             searchquery=search_combined,

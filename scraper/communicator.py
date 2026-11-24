@@ -44,5 +44,10 @@ class Communicator:
         cls.__scraped_data = data
 
     @classmethod
+    def clear_scraped_data(cls):
+        """Discard results from a previous scrape when a new one begins."""
+        cls.__scraped_data = []
+
+    @classmethod
     def get_scraped_data(cls):
         return cls.__scraped_data

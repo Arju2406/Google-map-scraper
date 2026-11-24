@@ -10,9 +10,10 @@ class Scroller:
 
     def __init__(self, driver) -> None:
         self.driver = driver
-        # Cap the number of locations parsed on cloud hosts. Each location
-        # requires a separate page load, which is slow and often blocked.
-        self.max_results = 3 if os.environ.get("RENDER") else 10_000
+        # Scrape ALL locations by default. Optionally cap via MAX_RESULTS env var
+        # (useful on low-memory cloud plans where many page loads can crash it).
+        cap = os.environ.get("MAX_RESULTS", "").strip()
+        self.max_results = int(cap) if cap.isdigit() and int(cap) > 0 else None
 
     def __init_parser(self):
         # Import Parser here to avoid circular import
@@ -21,7 +22,11 @@ class Scroller:
 
     def start_parsing(self):
         self.__init_parser()
-        self.parser.main(self.__allResultsLinks[:self.max_results])
+        links = self.__allResultsLinks
+        if self.max_results:
+            links = links[:self.max_results]
+            Communicator.show_message(f"Using MAX_RESULTS cap of {self.max_results} locations.")
+        self.parser.main(links)
 
     def scroll(self):
         try:
@@ -92,13 +97,6 @@ class Scroller:
                     Communicator.show_message(
                         f"Total locations scrolled: {len(self.__allResultsLinks)}"
                     )
-
-                    # Stop early on cloud hosts to avoid excessive slow loads.
-                    if os.environ.get("RENDER") and len(self.__allResultsLinks) >= self.max_results:
-                        Communicator.show_message(
-                            f"Reached the cloud-host limit of {self.max_results} locations."
-                        )
-                        break
         except (WebDriverException, TimeoutException, Exception) as e:
             Communicator.show_message(
                 "Scrolling stopped because Google Maps did not respond in time "
