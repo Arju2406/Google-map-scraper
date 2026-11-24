@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, send_file
+from flask import render_template, request, redirect, url_for, send_file, flash
 from datetime import datetime
 from io import BytesIO
 import openpyxl
@@ -37,6 +37,12 @@ def scrape():
     except Exception as e:
         error_message = str(e)
         Communicator.show_error_message(f"Scraping failed: {error_message}", "500")
+        flash(
+            "Scraping could not complete. If you are using the hosted (Render) "
+            "version, note that Google Maps frequently blocks cloud services. "
+            "Try running the app locally, or retry in a few minutes.",
+            "error",
+        )
         return redirect(url_for('index'))
 
 @app.route('/view_data')

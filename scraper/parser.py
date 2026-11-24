@@ -125,7 +125,12 @@ class Parser(Base):
                     # Check if the cancellation flag is set, and exit early if it is
                     break
 
-                self.openingurl(url=resultLink)
+                if not self.openingurl(url=resultLink):
+                    # Location page failed to load (timeout / blocked on cloud IP).
+                    Communicator.show_message(
+                        "Skipping a location that could not be loaded (blocked or timed out)."
+                    )
+                    continue
                 self.parse()
 
         except Exception as e:
