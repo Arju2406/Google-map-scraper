@@ -493,3 +493,38 @@ tbody tr:hover {
         grid-template-columns: 1fr;
     }
 }
+/* Scraping status panel */
+.status-panel {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    margin-bottom: 18px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #e8ecf1;
+    font-size: 15px;
+}
+.status-panel.done {
+    background: rgba(46, 204, 113, 0.15);
+    border-color: rgba(46, 204, 113, 0.4);
+    color: #7ef0a8;
+}
+.status-panel.error {
+    background: rgba(231, 76, 60, 0.15);
+    border-color: rgba(231, 76, 60, 0.4);
+    color: #ff9e94;
+}
+.status-spinner {
+    width: 18px;
+    height: 18px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #4aa3ff;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    flex: 0 0 auto;
+}
+.status-panel.done .status-spinner,
+.status-panel.error .status-spinner { display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }

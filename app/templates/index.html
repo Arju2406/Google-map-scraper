@@ -30,6 +30,11 @@
                 {% endif %}
             {% endwith %}
 
+            <div id="scrape-status-panel" class="status-panel" style="display:none;">
+                <div class="status-spinner"></div>
+                <span id="scrape-status-text">Starting...</span>
+            </div>
+
             <div class="form-card">
                 <form method="post" action="{{ url_for('scrape') }}" id="scrape-form">
                     <div class="form-row">
@@ -54,7 +59,7 @@
                         </div>
 
                         <div class="buttons-wrapper">
-                            <button type="submit" class="primary-button">
+                            <button type="submit" class="primary-button" id="scrape-button">
                                 <span class="button-content">
                                     <span class="icon">🔍</span>
                                     <span class="text">Start Scraping</span>
@@ -62,7 +67,7 @@
                             </button>
 
                             {% if has_existing_data %}
-                            <a href="{{ url_for('view_data') }}" class="view-data-button">
+                            <a href="{{ url_for('view_data') }}" class="view-data-button" id="view-data-button">
                                 <span class="button-content">
                                     <span class="icon">📊</span>
                                     <span class="text">View Data</span>
@@ -77,17 +82,68 @@
     </div>
 
     <script>
-        document.getElementById('scrape-form').addEventListener('submit', function() {
-            const flashMessages = document.getElementById('flash-messages');
-            if (flashMessages) {
-                flashMessages.style.display = 'none';
+        (function () {
+            const panel = document.getElementById('scrape-status-panel');
+            const statusText = document.getElementById('scrape-status-text');
+            const button = document.getElementById('scrape-button');
+            const form = document.getElementById('scrape-form');
+            const buttonsWrapper = document.querySelector('.buttons-wrapper');
+            const startPolling = {{ 'true' if request.args.get('scraping') == '1' else 'false' }};
+
+            function showStatus(message) {
+                statusText.textContent = message;
+                panel.style.display = 'flex';
             }
 
-            const submitButton = this.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-            const buttonContent = submitButton.querySelector('.button-content');
-            buttonContent.innerHTML = '<span class="loading-spinner"></span><span class="text">Processing...</span>';
-        });
+            function addViewDataButton() {
+                if (document.getElementById('view-data-button')) return;
+                const link = document.createElement('a');
+                link.href = "{{ url_for('view_data') }}";
+                link.className = 'view-data-button';
+                link.id = 'view-data-button';
+                link.innerHTML = '<span class="button-content"><span class="icon">📊</span><span class="text">View Data</span></span>';
+                buttonsWrapper.appendChild(link);
+            }
+
+            function poll() {
+                fetch("{{ url_for('scrape_status') }}", { cache: 'no-store' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.status === 'running') {
+                            showStatus(data.message || 'Scraping in progress...');
+                            setTimeout(poll, 2000);
+                        } else if (data.status === 'done') {
+                            showStatus('✓ Scraping completed!');
+                            panel.classList.add('done');
+                            button.disabled = false;
+                            button.querySelector('.button-content').innerHTML = '<span class="icon">🔍</span><span class="text">Start Scraping</span>';
+                            if (data.has_data) addViewDataButton();
+                        } else if (data.status === 'error') {
+                            showStatus('✗ ' + (data.error || data.message || 'Scraping failed.'));
+                            panel.classList.add('error');
+                            button.disabled = false;
+                            button.querySelector('.button-content').innerHTML = '<span class="icon">🔍</span><span class="text">Start Scraping</span>';
+                        } else {
+                            panel.style.display = 'none';
+                            button.disabled = false;
+                        }
+                    })
+                    .catch(function () { setTimeout(poll, 3000); });
+            }
+
+            form.addEventListener('submit', function () {
+                const flashMessages = document.getElementById('flash-messages');
+                if (flashMessages) flashMessages.style.display = 'none';
+                button.disabled = true;
+                button.querySelector('.button-content').innerHTML = '<span class="loading-spinner"></span><span class="text">Starting...</span>';
+                showStatus('Starting scrape...');
+            });
+
+            if (startPolling) {
+                showStatus('Starting scrape...');
+                setTimeout(poll, 1000);
+            }
+        })();
     </script>
 </body>
 </html>

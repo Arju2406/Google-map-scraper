@@ -3,8 +3,15 @@ class Communicator:
     __backend_object = None
     __scraped_data = []
 
+    # Background-job state (scraping runs off the HTTP request to avoid
+    # Render's ~30s proxy request timeout).
+    __status = "idle"  # idle | running | done | error
+    __status_message = ""
+    __error_message = ""
+
     @classmethod
     def show_message(cls, message):
+        cls.__status_message = message
         if cls.__frontend_object is None:
             print(message)
         else:
@@ -12,6 +19,7 @@ class Communicator:
 
     @classmethod
     def show_error_message(cls, message, error_code):
+        cls.__status_message = message
         if cls.__frontend_object is None:
             print(f"{message} Error code is: {error_code}")
         else:
@@ -51,3 +59,28 @@ class Communicator:
     @classmethod
     def get_scraped_data(cls):
         return cls.__scraped_data
+
+    # ---- Background job state helpers ----
+    @classmethod
+    def start_job(cls):
+        cls.__status = "running"
+        cls.__status_message = "Starting..."
+        cls.__error_message = ""
+        cls.clear_scraped_data()
+
+    @classmethod
+    def set_status(cls, status, message=None, error=None):
+        cls.__status = status
+        if message is not None:
+            cls.__status_message = message
+        if error is not None:
+            cls.__error_message = error
+
+    @classmethod
+    def get_status(cls):
+        return {
+            "status": cls.__status,
+            "message": cls.__status_message,
+            "error": cls.__error_message,
+            "has_data": bool(cls.__scraped_data),
+        }

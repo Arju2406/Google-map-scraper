@@ -1,10 +1,12 @@
 import logging
+import threading
 from datetime import datetime
 from io import BytesIO
 
 import pandas as pd
 from flask import (
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -18,15 +20,38 @@ from scraper.scraper import Backend
 
 logger = logging.getLogger(__name__)
 
-# Successful scrape formats supported by the download endpoint.
 DOWNLOAD_FORMATS = {"csv", "json", "excel", "xlsx"}
+
+
+def _run_scrape(search_combined, headless_mode):
+    """Run the scrape in a background thread.
+
+    Scraping takes minutes, which exceeds Render's HTTP request timeout. Running
+    it here lets /scrape respond immediately; the browser polls /scrape_status.
+    """
+    try:
+        backend = Backend(
+            searchquery=search_combined,
+            outputformat="csv",
+            headlessmode=headless_mode,
+        )
+        backend.mainscraping()
+
+        if Communicator.get_scraped_data():
+            Communicator.set_status("done", "Scraping completed successfully.")
+        else:
+            Communicator.set_status(
+                "error",
+                "No places were found. Google Maps may be showing a consent/"
+                "CAPTCHA page (common on cloud services). Try again or run locally.",
+            )
+    except Exception as exc:
+        logger.exception("Background scraping failed")
+        Communicator.set_status("error", f"Scraping failed: {exc}")
 
 
 @app.route("/")
 def index():
-    # The button is driven by real in-memory data, not a spoofable query flag.
-    # Data is cleared at the start of each new scrape, so it disappears while
-    # a new scrape is running or after a failure.
     has_existing_data = bool(Communicator.get_scraped_data())
     return render_template("index.html", has_existing_data=has_existing_data)
 
@@ -41,48 +66,36 @@ def scrape():
         flash("Please provide both a keyword and a location.", "error")
         return redirect(url_for("index"))
 
+    status = Communicator.get_status()
+    if status["status"] == "running":
+        flash("A scrape is already running. Please wait for it to finish.", "error")
+        return redirect(url_for("index"))
+
     search_combined = f"{search_query} {location_query}"
+    Communicator.start_job()
 
-    # A new scrape invalidates results from the previous one. Clear them so
-    # the "View Data" button never points to stale data while this runs.
-    Communicator.clear_scraped_data()
+    thread = threading.Thread(
+        target=_run_scrape,
+        args=(search_combined, headless_mode),
+        daemon=True,
+    )
+    thread.start()
 
-    try:
-        backend = Backend(
-            searchquery=search_combined,
-            outputformat="csv",
-            headlessmode=headless_mode,
-        )
-        backend.mainscraping()
-
-        if not Communicator.get_scraped_data():
-            flash(
-                "Scraping finished but no places were found. Google Maps may be "
-                "showing a consent/CAPTCHA page (common on cloud services like "
-                "Render). Please try again or run locally.",
-                "error",
-            )
-            return redirect(url_for("index"))
-
-        flash("Scraping completed successfully.", "success")
-        return redirect(url_for("index"))
-    except Exception as exc:
-        logger.exception("Scraping failed")
-        Communicator.show_error_message(f"Scraping failed: {exc}", "500")
-        flash(
-            "Scraping could not complete. If you are using the hosted (Render) "
-            "version, note that Google Maps frequently blocks cloud services. "
-            "Try running the app locally, or retry in a few minutes.",
-            "error",
-        )
-        return redirect(url_for("index"))
+    # Respond immediately so Render's proxy never times out.
+    flash("Scraping started. This may take a few minutes...", "success")
+    return redirect(url_for("index", scraping="1"))
 
 
 @app.route("/scrape", methods=["GET"])
 def scrape_get():
-    # Avoid a raw 405 when someone opens /scrape directly in a browser.
     flash("Please submit the scraping form from the home page.", "error")
     return redirect(url_for("index"))
+
+
+@app.route("/scrape_status")
+def scrape_status():
+    """JSON endpoint polled by the browser to track the background job."""
+    return jsonify(Communicator.get_status())
 
 
 @app.route("/view_data")
