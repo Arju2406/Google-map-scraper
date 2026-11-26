@@ -131,17 +131,54 @@
                     .catch(function () { setTimeout(poll, 3000); });
             }
 
-            form.addEventListener('submit', function () {
+            function wakeServer(done) {
+                // On the free plan the instance sleeps after ~15 min idle. The
+                // first request can take ~60s to boot. Ping /health first so we
+                // can show a friendly "waking up" message instead of a timeout.
+                showStatus('Waking up the server (first request after idle)...');
+                const controller = new AbortController();
+                const timer = setTimeout(function () { controller.abort(); }, 90000);
+                fetch("{{ url_for('health') }}", { cache: 'no-store', signal: controller.signal })
+                    .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+                    .then(function () { clearTimeout(timer); done(); })
+                    .catch(function () {
+                        clearTimeout(timer);
+                        showStatus('Server is still starting. Retrying...');
+                        setTimeout(function () { wakeServer(done); }, 2000);
+                    });
+            }
+
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
                 const flashMessages = document.getElementById('flash-messages');
                 if (flashMessages) flashMessages.style.display = 'none';
                 button.disabled = true;
                 button.querySelector('.button-content').innerHTML = '<span class="loading-spinner"></span><span class="text">Starting...</span>';
-                showStatus('Starting scrape...');
+                wakeServer(function () {
+                    showStatus('Server ready. Starting scrape...');
+                    // Submit through a hidden fetch so the cold start never
+                    // blocks the visible page; then follow the redirect target.
+                    const data = new FormData(form);
+                    fetch(form.action, { method: 'POST', body: data })
+                        .then(function (r) {
+                            // Flask redirects to /?scraping=1 after starting.
+                            window.location.href = "{{ url_for('index') }}?scraping=1";
+                        })
+                        .catch(function () {
+                            showStatus('Could not start scrape. Please retry.');
+                            button.disabled = false;
+                        });
+                });
             });
 
             if (startPolling) {
                 showStatus('Starting scrape...');
-                setTimeout(poll, 1000);
+                // Wake the server first so a cold start shows progress instead
+                // of a blank timeout, then begin polling for job status.
+                wakeServer(function () {
+                    showStatus('Server ready. Checking scrape progress...');
+                    setTimeout(poll, 500);
+                });
             }
         })();
     </script>

@@ -5,6 +5,11 @@ from scraper.communicator import Communicator
 
 client = app.test_client()
 
+# Health endpoint (used to wake the service after idle).
+r = client.get("/health")
+assert r.status_code == 200 and r.get_json()["status"] == "ok"
+print("GET /health -> ok OK")
+
 # GET /scrape must redirect home, not return a raw 405.
 r = client.get("/scrape")
 assert r.status_code == 302 and r.headers["Location"].endswith("/")

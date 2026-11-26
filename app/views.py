@@ -50,6 +50,12 @@ def _run_scrape(search_combined, headless_mode):
         Communicator.set_status("error", f"Scraping failed: {exc}")
 
 
+@app.route("/health")
+def health():
+    """Lightweight health check used by Render to warm/monitor the service."""
+    return jsonify({"status": "ok"})
+
+
 @app.route("/")
 def index():
     has_existing_data = bool(Communicator.get_scraped_data())
